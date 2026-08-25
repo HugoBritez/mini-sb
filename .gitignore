@@ -1,0 +1,4 @@
+# Data real de encuestas (contiene info sensible del trabajo, no se sube)
+/encuesta-de-prueba.json
+server/fixtures/
+server/scripts/convert-survey.ts

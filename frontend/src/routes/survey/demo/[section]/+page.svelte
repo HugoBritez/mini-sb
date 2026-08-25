@@ -9,8 +9,8 @@
 
 	const questionTypeLabels: Record<QuestionType, string> = {
 		short_text: 'Texto corto',
-		single_choice: 'Opción múltiple',
-		multi_choice: 'Casillas',
+		single_choice: 'Selección única',
+		multi_choice: 'Selección múltiple',
 		rating: 'Escala'
 	};
 </script>

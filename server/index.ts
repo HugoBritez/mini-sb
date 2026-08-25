@@ -4,10 +4,14 @@ import { Repo } from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
 import type { Survey } from "./types";
 
-const PORT = 3030;
+// Railway (y la mayoría de PaaS) inyectan PORT en runtime; 3030 queda de fallback para local.
+const PORT = Number(process.env.PORT) || 3030;
 
 const httpServer = http.createServer();
-const wss = new WebSocketServer({ server: httpServer });
+// perMessageDeflate apagado: algunos proxies (el borde de Railway incluido)
+// manejan mal la negociación de compresión de WebSocket, y los mensajes
+// binarios de Automerge (CBOR) llegan corruptos o se pierden en silencio.
+const wss = new WebSocketServer({ server: httpServer, perMessageDeflate: false });
 
 const repo = new Repo({
   network: [new NodeWSServerAdapter(wss)],
@@ -31,6 +35,11 @@ httpServer.on("request", (req, res) => {
       "Access-Control-Allow-Origin": "*",
     });
     res.end(JSON.stringify({ url: surveyHandle.url }));
+    return;
+  }
+  if (req.method === "GET" && (req.url === "/" || req.url === "/health")) {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("mini-sb sync server: ok");
     return;
   }
   res.writeHead(404);

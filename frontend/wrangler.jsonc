@@ -1,0 +1,10 @@
+{
+	"name": "mini-sb",
+	"compatibility_date": "2026-08-19",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"assets": {
+		"directory": ".svelte-kit/cloudflare",
+		"binding": "ASSETS"
+	}
+}

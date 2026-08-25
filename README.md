@@ -4,6 +4,13 @@ Mini Survey Builder — un MVP para demostrar edición colaborativa en tiempo re
 
 La idea nace de una pregunta simple: **git resuelve merges sin un servidor central que arbitre — ¿se puede llevar esa misma idea a una app colaborativa en tiempo real?** Automerge es justamente eso: la misma filosofía de git (cambios con causalidad, no snapshots), pero resolviendo automáticamente en vez de pedirte que resuelvas un conflicto a mano.
 
+## Demo en vivo
+
+- **App**: https://mini-sb.sauxstudio.com
+- **Sync server**: https://api-mini-sb.sauxstudio.com (WebSocket relay, Railway)
+
+Abrilo en dos pestañas para ver la colaboración en tiempo real.
+
 ## Qué muestra
 
 - **Edición colaborativa en tiempo real** — dos pestañas/navegadores editando la misma encuesta, sincronizados vía WebSocket, sin pisarse.
@@ -39,3 +46,8 @@ bun run dev
 Abrí `http://localhost:5173` en dos pestañas (o dos navegadores) y editá la misma encuesta desde las dos para ver la sincronización en vivo.
 
 > Es un MVP: el documento vive en memoria del server (se resetea al reiniciarlo), no hay auth, y hay una sola encuesta demo fija.
+
+## Cómo desplegarlo
+
+- **Server → Railway**: `cd server && railway up`. Railway inyecta `PORT` solo; el script `start` (`bun index.ts`) ya lo respeta.
+- **Frontend → Cloudflare Workers**: creá `frontend/.env.production` con `VITE_SYNC_SERVER_URL=wss://<tu-server-de-railway>`, después `cd frontend && bun run build && bunx wrangler deploy`. La URL del sync server queda embebida en el bundle al buildear, así que hay que rebuildear si cambia.

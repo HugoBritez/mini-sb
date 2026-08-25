@@ -2,7 +2,35 @@ import { Repo, isValidAutomergeUrl, type DocHandle, type UrlHeads } from '@autom
 import { WebSocketClientAdapter as BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket';
 import type { Question, QuestionType, Section, Survey } from './types';
 
-const SERVER_HOST = 'localhost:3030';
+// wss:// en producción (apuntando al server de Railway), ws:// en dev local.
+// Se deriva la URL http(s) del mismo valor para no repetir la config.
+const WS_URL: string = import.meta.env.VITE_SYNC_SERVER_URL ?? 'ws://localhost:3030';
+const HTTP_URL = WS_URL.replace(/^ws/, 'http');
+
+// Cuánto esperar como máximo a que el peer real (el sync server) se conecte
+// antes de intentar buscar el doc igual. `BrowserWebSocketClientAdapter`
+// tiene un timeout interno de 1000ms que lo fuerza a "ready" si el handshake
+// real todavía no terminó (en localhost nunca importa, en una red real con
+// latencia sí) — repo.find() puede ver "listo pero sin peer" y devolver
+// "unavailable" antes de que el peer llegue unos milisegundos después. Acá
+// esperamos el evento 'peer' real en vez de confiar en ese ready forzado.
+const PEER_WAIT_TIMEOUT_MS = 8000;
+
+function waitForPeer(repo: Repo, timeoutMs: number): Promise<void> {
+	if (repo.peers.length > 0) return Promise.resolve();
+	return new Promise((resolve) => {
+		const timer = setTimeout(() => {
+			repo.networkSubsystem.off('peer', onPeer);
+			resolve();
+		}, timeoutMs);
+		function onPeer() {
+			clearTimeout(timer);
+			repo.networkSubsystem.off('peer', onPeer);
+			resolve();
+		}
+		repo.networkSubsystem.on('peer', onPeer);
+	});
+}
 
 // cuanto esperamos antes de dar por perdido el lock de alguien que no manda
 // heartbeat (si alguien  cerró la pestaña sin soltar el foco).
@@ -76,7 +104,7 @@ class SurveyStore {
 
 	async connect() {
 		try {
-			const res = await fetch(`http://${SERVER_HOST}/doc-url`);
+			const res = await fetch(`${HTTP_URL}/doc-url`);
 			const { url } = (await res.json()) as { url: string };
 
 			if (!isValidAutomergeUrl(url)) {
@@ -84,8 +112,10 @@ class SurveyStore {
 			}
 
 			const repo = new Repo({
-				network: [new BrowserWebSocketClientAdapter(`ws://${SERVER_HOST}`)]
+				network: [new BrowserWebSocketClientAdapter(WS_URL)]
 			});
+
+			await waitForPeer(repo, PEER_WAIT_TIMEOUT_MS);
 
 			const handle = await repo.find<Survey>(url);
 			this.#handle = handle;
